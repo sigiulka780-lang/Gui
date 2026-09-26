@@ -827,3 +827,191 @@ function Ash:CreateWindow(config)
     
     AsButton.MouseEnter:Connect(function()
         Tween(
+    AsButton.MouseEnter:Connect(function()
+        Tween(AsButton, {BackgroundColor3 = theme.SurfaceLight}, 0.15)
+    end)
+    AsButton.MouseLeave:Connect(function()
+        Tween(AsButton, {BackgroundColor3 = theme.Background}, 0.15)
+    end)
+
+    -- Метод: Скрыть окно (показать AsButton)
+    function Window:Hide()
+        if self.Hidden then return end
+        self.Hidden = true
+        self.OrigPosition = Main.Position
+
+        Tween(Main, {
+            Position = UDim2.new(0.5, -size.X.Offset / 2, 1.5, 0),
+            BackgroundTransparency = 1
+        }, 0.3)
+
+        task.delay(0.3, function()
+            Main.Visible = false
+            AsButton.Visible = true
+            Tween(AsButton, {BackgroundTransparency = 0}, 0.2)
+        end)
+    end
+
+    -- Метод: Показать окно (скрыть AsButton)
+    function Window:Show()
+        if not self.Hidden then return end
+        self.Hidden = false
+
+        AsButton.Visible = false
+        Main.Visible = true
+
+        Tween(Main, {
+            Position = UDim2.new(0.5, -size.X.Offset / 2, 0.5, -size.Y.Offset / 2),
+            BackgroundTransparency = 0
+        }, 0.3)
+    end
+
+    -- Метод: Переключить видимость
+    function Window:Toggle()
+        if self.Hidden then
+            self:Show()
+        else
+            self:Hide()
+        end
+    end
+
+    -- Клик по AsButton
+    AsButton.MouseButton1Click:Connect(function()
+        Window:Show()
+    end)
+
+    -- Скрытие/показ на клавишу K
+    UserInputService.InputBegan:Connect(function(input, gpe)
+        if gpe then return end
+        if input.KeyCode == Enum.KeyCode.K then
+            Window:Toggle()
+        end
+    end)
+
+    -- Minimize / Close
+    MinimizeBtn.MouseButton1Click:Connect(function()
+        Window:Hide()
+    end)
+
+    CloseBtn.MouseButton1Click:Connect(function()
+        Tween(Main, {
+            Size = UDim2.new(0, 0, 0, 0),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            BackgroundTransparency = 1
+        }, 0.2)
+        task.delay(0.25, function()
+            ScreenGui:Destroy()
+        end)
+    end)
+
+    table.insert(Ash.Windows, Window)
+    return Window
+end
+
+-- ============================================================
+-- УВЕДОМЛЕНИЯ
+-- ============================================================
+function Ash:Notify(title, text, notifType, duration)
+    duration = duration or 3
+    local theme = Palette
+    local guiParent = GetGuiParent()
+
+    local NotifGui = Create("ScreenGui", {
+        Name = "Ash_Notif_" .. tostring(math.random(100000, 999999)),
+        ResetOnSpawn = false,
+        IgnoreGuiInset = true,
+        DisplayOrder = 1000000,
+        Parent = guiParent
+    })
+
+    local Container = Create("Frame", {
+        Size = UDim2.new(0, 280, 1, 0),
+        Position = UDim2.new(1, -300, 0, 0),
+        BackgroundTransparency = 1,
+        Parent = NotifGui
+    })
+    Create("UIListLayout", {
+        Padding = UDim.new(0, 8),
+        VerticalAlignment = Enum.VerticalAlignment.Bottom,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = Container
+    })
+    Create("UIPadding", {
+        PaddingBottom = UDim.new(0, 20),
+        Parent = Container
+    })
+
+    local Notif = Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 60),
+        BackgroundColor3 = theme.Surface,
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Parent = Container
+    })
+    Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = Notif})
+    local Stroke = Create("UIStroke", {
+        Color = theme.Accent,
+        Thickness = 1,
+        Transparency = 1,
+        Parent = Notif
+    })
+
+    local Bar = Create("Frame", {
+        Size = UDim2.new(0, 3, 1, -20),
+        Position = UDim2.new(0, 0, 0, 10),
+        BackgroundColor3 = theme.Accent,
+        BorderSizePixel = 0,
+        Parent = Notif
+    })
+    Create("UICorner", {CornerRadius = UDim.new(0, 2), Parent = Bar})
+
+    local TitleLabel = Create("TextLabel", {
+        Size = UDim2.new(1, -20, 0, 16),
+        Position = UDim2.new(0, 14, 0, 8),
+        BackgroundTransparency = 1,
+        Text = title,
+        TextColor3 = theme.Text,
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTransparency = 1,
+        Parent = Notif
+    })
+    local TextLabel = Create("TextLabel", {
+        Size = UDim2.new(1, -20, 0, 28),
+        Position = UDim2.new(0, 14, 0, 26),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = theme.TextDim,
+        TextSize = 10,
+        Font = Enum.Font.Gotham,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Top,
+        TextWrapped = true,
+        TextTransparency = 1,
+        Parent = Notif
+    })
+
+    Tween(Notif, {BackgroundTransparency = 0.05}, 0.25)
+    Tween(Stroke, {Transparency = 0.4}, 0.25)
+    Tween(TitleLabel, {TextTransparency = 0}, 0.25)
+    Tween(TextLabel, {TextTransparency = 0.15}, 0.25)
+
+    task.delay(duration, function()
+        Tween(Notif, {BackgroundTransparency = 1}, 0.25)
+        Tween(Stroke, {Transparency = 1}, 0.25)
+        Tween(TitleLabel, {TextTransparency = 1}, 0.25)
+        Tween(TextLabel, {TextTransparency = 1}, 0.25)
+        task.wait(0.3)
+        if NotifGui then NotifGui:Destroy() end
+    end)
+end
+
+-- ============================================================
+-- ГЛОБАЛЬНАЯ УСТАНОВКА
+-- ============================================================
+_G.AshLibrary = Ash
+
+print("[Ash UI] Библиотека загружена")
+
+return Ash
