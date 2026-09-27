@@ -996,16 +996,16 @@ local EASINGS = {
     quart  = Enum.EasingStyle.Quart,
     quint  = Enum.EasingStyle.Quint,
     sine   = Enum.EasingStyle.Sine,
-    circ   = Enum.EasingStyle.Circ,
+    circ   = Enum.EasingStyle.Circular,   -- в Roblox это Circular, не Circ
     back   = Enum.EasingStyle.Back,
     elastic= Enum.EasingStyle.Elastic,
     bounce = Enum.EasingStyle.Bounce,
 }
 
 local DIRECTIONS = {
-    in  = Enum.EasingDirection.In,
-    out = Enum.EasingDirection.Out,
-    inOut = Enum.EasingDirection.InOut,
+    ["in"]     = Enum.EasingDirection.In,
+    ["out"]    = Enum.EasingDirection.Out,
+    ["inOut"]  = Enum.EasingDirection.InOut,
 }
 
 --[[
@@ -1046,7 +1046,7 @@ RunService.Heartbeat:Connect(function()
                 anim.step(anim.ease and anim.ease(t) or t, t)
 
                 if t >= 1 and not anim.infinite then
-                    if anim.repeat or anim.yoyo then
+                    if anim.loops or anim.yoyo then
                         anim.start = clock
                     else
                         if anim.onDone then
@@ -1134,6 +1134,8 @@ end
     Используется для всего, что должно синхронизироваться с UI-циклом:
     шаги элементов, открытие страниц, инерция, glow-пульс.
     step = function(t, raw) ... end
+    options.loops / options.yoyo  — повторять цикл бесконечно
+    (именно 'loops', не 'repeat': 'repeat' — зарезервированное слово Lua)
 ]]
 function Motion.Frame(inst, duration, step, options)
     options = options or {}
@@ -1148,7 +1150,7 @@ function Motion.Frame(inst, duration, step, options)
         duration= duration,
         step    = step,
         ease    = options.ease,
-        repeat  = options.repeat,
+        loops    = options.loops,
         yoyo    = options.yoyo,
         dir     = 1,
         t       = 0,
@@ -1556,7 +1558,7 @@ function Motion.Pulse(inst, property, from, to, duration, style)
         inst[property] = from + (to - from) * t
     end, {
         ease = Motion.EaseFn(style or "inOutSine"),
-        repeat = true,
+        loops = true,
         yoyo = true,
     })
 end
@@ -2484,7 +2486,11 @@ function Registry.GetElement(flagName)
     return Registry.Elements[flagName]
 end
 
-function Registry.Sections(name)
+-- Получить раздел по имени.
+-- ВАЖНО: это НЕ может называться Registry.Sections — такое имя уже занято
+-- таблицей разделов (Registry.Sections = {}), и функция перетёрла бы её,
+-- из-за чего Registry.AddSection() падал с "attempt to index a function value".
+function Registry.GetSection(name)
     return Registry.Sections[name]
 end
 
@@ -3462,7 +3468,10 @@ end
 -- История уведомлений
 function Notify:GetHistory()
     local out = {}
-    for i = #Notify.History, 1, math.max(1, #Notify.History - Notify.MaxHistory + 1), -1 do
+    -- В числовом for допустимы только 3 выражения (start, stop, step),
+    -- границу считаем заранее — иначе синтаксическая ошибка парсера.
+    local first = math.max(1, #Notify.History - Notify.MaxHistory + 1)
+    for i = #Notify.History, first, -1 do
         table.insert(out, Notify.History[i])
     end
     return out
@@ -6611,7 +6620,7 @@ Ash.GlobalSettings = {
     Transparency = 0.0,
     OpenSpeed = 0.3,
     DragSmooth = 0.18,
-    HideKey = Enum.KeyCode.RightControl,
+    HideKey = Enum.KeyCode.K,   -- клавиша показать/скрыть окно (K по умолчанию)
     AccentOverride = nil,   -- если задать Color3 — переопределяет Accent темы
 }
 
@@ -6721,6 +6730,13 @@ function Ash:CreateWindow(config)
     local size = config.Size or UDim2.new(0, 560, 0, 440)
     local guiParent = GetGuiParent()
     local openSpeed = config.OpenSpeed or Ash.GlobalSettings.OpenSpeed or 0.3
+
+    -- Горячая клавиша показать/скрыть. Раньше config.HideKey игнорировался,
+    -- поэтому Ash:CreateWindow({HideKey = ...}) не действовал.
+    --   Ash:CreateWindow({HideKey = Enum.KeyCode.RightControl})
+    if config.HideKey then
+        Ash.GlobalSettings.HideKey = config.HideKey
+    end
 
     local ScreenGui = Create("ScreenGui", {
         Name = "Ash_UI_" .. tostring(math.random(100000, 999999)),
@@ -7702,8 +7718,10 @@ function Ash:CreateWindow(config)
     -- ============================================================
     UserInputService.InputBegan:Connect(function(input, processed)
         if processed then return end
-        local key = Ash.GlobalSettings.HideKey
-        if key == Enum.KeyCode.Unknown then return end
+        -- Приоритет у бинда из вкладки Settings (Flag = "Ash_HideKey"):
+        -- он же восстанавливается из конфига, поэтому клавиша не слетает.
+        local key = Registry.GetFlag("Ash_HideKey") or Ash.GlobalSettings.HideKey
+        if key == nil or key == Enum.KeyCode.Unknown then return end
         -- Игнорируем ввод, когда пользователь печатает в TextBox
         if UserInputService:GetFocusedTextBox() then return end
         if input.KeyCode == key then
@@ -7937,7 +7955,7 @@ function Ash:Quick(title, options)
         Title = title or "Ash",
         Version = options.Version or "3.0",
         Size = options.Size or UDim2.new(0, 560, 0, 440),
-        HideKey = options.HideKey or Enum.KeyCode.RightControl,
+        HideKey = options.HideKey or Enum.KeyCode.K,
     })
     if options.SettingsTab ~= false then
         window:CreateSettingsTab()
@@ -8002,7 +8020,7 @@ if not (getgenv and getgenv().__ASH_LOADED__) then
     task.defer(function()
         Notify:New({
             Title = "Ash UI v3.0",
-            Message = "Загружено · ПКМ по окну — закрыть · " .. tostring(Theme.GetName()),
+            Message = "Загружено · K — показать/скрыть окно · " .. tostring(Theme.GetName()),
             Duration = 4,
             Icon = "✓",
             Color = Theme.Get("Accent"),
