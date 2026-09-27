@@ -1,7 +1,6 @@
 -- ============================================================
--- Ash UI Library v1.1 — Lunar Edition
--- Лунная минималистичная GUI-библиотека
--- Совместимо с Real / Xeno / Delta / Solara
+-- Ash UI Library v2.0 — Lunar Edition (Smooth)
+-- Плавная лунная GUI-библиотека с настройками
 -- ============================================================
 
 local Players = game:GetService("Players")
@@ -12,21 +11,77 @@ local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
 -- ============================================================
--- ЛУННАЯ ПАЛИТРА (#424242 в основе)
+-- ПАЛИТРЫ (можно переключать в настройках)
 -- ============================================================
-local Palette = {
-    Background   = Color3.fromRGB(14, 16, 22),     -- глубокое ночное небо
-    Surface      = Color3.fromRGB(26, 28, 36),     -- тёмная сторона луны
-    SurfaceLight = Color3.fromRGB(66, 66, 66),     -- #424242 — лунный пепел
-    SurfaceHover = Color3.fromRGB(90, 90, 90),     -- лунный свет
-    Border       = Color3.fromRGB(110, 110, 110),  -- лунная пыль
-    BorderLight  = Color3.fromRGB(140, 140, 140),  -- лунный блик
-    Text         = Color3.fromRGB(232, 234, 240),  -- свет полнолуния
-    TextDim      = Color3.fromRGB(150, 154, 164),  -- лунная дымка
-    TextDisabled = Color3.fromRGB(96, 98, 108),    -- тень
-    Accent       = Color3.fromRGB(200, 205, 220),  -- серебро луны
-    MoonGlow     = Color3.fromRGB(180, 190, 220),  -- свечение
+local Themes = {
+    Lunar = {
+        Background   = Color3.fromRGB(14, 16, 22),
+        Surface      = Color3.fromRGB(26, 28, 36),
+        SurfaceLight = Color3.fromRGB(66, 66, 66),
+        SurfaceHover = Color3.fromRGB(90, 90, 90),
+        Border       = Color3.fromRGB(110, 110, 110),
+        BorderLight  = Color3.fromRGB(140, 140, 140),
+        Text         = Color3.fromRGB(232, 234, 240),
+        TextDim      = Color3.fromRGB(150, 154, 164),
+        TextDisabled = Color3.fromRGB(96, 98, 108),
+        Accent       = Color3.fromRGB(200, 205, 220),
+        MoonGlow     = Color3.fromRGB(180, 190, 220),
+    },
+    Blood = {
+        Background   = Color3.fromRGB(18, 8, 8),
+        Surface      = Color3.fromRGB(30, 14, 14),
+        SurfaceLight = Color3.fromRGB(66, 30, 30),
+        SurfaceHover = Color3.fromRGB(90, 40, 40),
+        Border       = Color3.fromRGB(120, 50, 50),
+        BorderLight  = Color3.fromRGB(160, 70, 70),
+        Text         = Color3.fromRGB(245, 220, 220),
+        TextDim      = Color3.fromRGB(180, 140, 140),
+        TextDisabled = Color3.fromRGB(110, 80, 80),
+        Accent       = Color3.fromRGB(255, 80, 80),
+        MoonGlow     = Color3.fromRGB(255, 60, 60),
+    },
+    Ocean = {
+        Background   = Color3.fromRGB(8, 14, 20),
+        Surface      = Color3.fromRGB(14, 24, 34),
+        SurfaceLight = Color3.fromRGB(30, 60, 80),
+        SurfaceHover = Color3.fromRGB(45, 85, 110),
+        Border       = Color3.fromRGB(70, 120, 150),
+        BorderLight  = Color3.fromRGB(100, 150, 180),
+        Text         = Color3.fromRGB(220, 235, 245),
+        TextDim      = Color3.fromRGB(140, 170, 190),
+        TextDisabled = Color3.fromRGB(80, 110, 130),
+        Accent       = Color3.fromRGB(80, 180, 255),
+        MoonGlow     = Color3.fromRGB(60, 160, 255),
+    },
+    Forest = {
+        Background   = Color3.fromRGB(10, 18, 12),
+        Surface      = Color3.fromRGB(18, 28, 20),
+        SurfaceLight = Color3.fromRGB(40, 60, 44),
+        SurfaceHover = Color3.fromRGB(60, 85, 65),
+        Border       = Color3.fromRGB(80, 110, 85),
+        BorderLight  = Color3.fromRGB(110, 145, 115),
+        Text         = Color3.fromRGB(225, 240, 225),
+        TextDim      = Color3.fromRGB(150, 180, 150),
+        TextDisabled = Color3.fromRGB(90, 115, 90),
+        Accent       = Color3.fromRGB(120, 220, 130),
+        MoonGlow     = Color3.fromRGB(100, 200, 110),
+    },
 }
+
+-- ============================================================
+-- ГЛОБАЛЬНЫЕ НАСТРОЙКИ ВСЕХ ОКОН
+-- ============================================================
+local GlobalSettings = {
+    ThemeName = "Lunar",
+    Transparency = 0.0,       -- прозрачность окна (0 = непрозрачно, 0.5 = полупрозрачно)
+    OpenSpeed = 0.35,         -- скорость открытия/закрытия (сек)
+    DragSmooth = 0.15,        -- плавность перетаскивания (0 = мгновенно, 0.3 = с инерцией)
+    HideKey = Enum.KeyCode.K,
+}
+
+local function GetTheme()
+    return Themes[GlobalSettings.ThemeName] or Themes.Lunar
+end
 
 -- ============================================================
 -- УТИЛИТЫ
@@ -42,11 +97,11 @@ local function Create(class, props)
     return inst
 end
 
-local function Tween(inst, props, dur, style)
+local function Tween(inst, props, dur, style, dir)
     local info = TweenInfo.new(
         dur or 0.2,
         style or Enum.EasingStyle.Quad,
-        Enum.EasingDirection.Out
+        dir or Enum.EasingDirection.Out
     )
     local t = TweenService:Create(inst, info, props)
     t:Play()
@@ -68,19 +123,33 @@ local Ash = {}
 Ash.__index = Ash
 Ash.Windows = {}
 Ash.Flags = {}
-Ash.Theme = Palette
+Ash.Themes = Themes
+Ash.GlobalSettings = GlobalSettings
+Ash.Theme = Themes.Lunar
+
+function Ash:SetTheme(name)
+    if Themes[name] then
+        GlobalSettings.ThemeName = name
+        Ash.Theme = Themes[name]
+        -- Применяем ко всем окнам
+        for _, win in ipairs(Ash.Windows) do
+            if win.ApplyTheme then
+                pcall(win.ApplyTheme, win)
+            end
+        end
+    end
+end
 
 -- ============================================================
--- ЛУНА (декоративный элемент)
+-- ЛУНА
 -- ============================================================
 local function BuildMoon(parent, size)
-    -- Внешнее свечение луны
     local Glow = Create("Frame", {
         Size = UDim2.new(0, size * 2.4, 0, size * 2.4),
         Position = UDim2.new(0.5, 0, 0.5, 0),
         AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = Palette.MoonGlow,
-        BackgroundTransparency = 0.85,
+        BackgroundColor3 = GetTheme().MoonGlow,
+        BackgroundTransparency = 0.88,
         BorderSizePixel = 0,
         ZIndex = 0,
         Parent = parent
@@ -91,40 +160,37 @@ local function BuildMoon(parent, size)
         Size = UDim2.new(0, size * 1.6, 0, size * 1.6),
         Position = UDim2.new(0.5, 0, 0.5, 0),
         AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = Palette.MoonGlow,
-        BackgroundTransparency = 0.7,
+        BackgroundColor3 = GetTheme().MoonGlow,
+        BackgroundTransparency = 0.75,
         BorderSizePixel = 0,
         ZIndex = 0,
         Parent = parent
     })
     Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Glow2})
 
-    -- Сама луна (тело)
     local MoonBody = Create("Frame", {
         Size = UDim2.new(0, size, 0, size),
         Position = UDim2.new(0.5, 0, 0.5, 0),
         AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = Palette.Text,
+        BackgroundColor3 = GetTheme().Text,
+        BackgroundTransparency = 0.15,
         BorderSizePixel = 0,
         ZIndex = 1,
         Parent = parent
     })
     Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = MoonBody})
 
-    -- Кратеры луны
-    local craters = {
+    for _, c in ipairs({
         {pos = UDim2.new(0.28, 0, 0.32, 0), size = 0.22},
         {pos = UDim2.new(0.62, 0, 0.25, 0), size = 0.14},
         {pos = UDim2.new(0.55, 0, 0.62, 0), size = 0.20},
         {pos = UDim2.new(0.30, 0, 0.68, 0), size = 0.12},
-        {pos = UDim2.new(0.75, 0, 0.55, 0), size = 0.10},
-    }
-    for _, c in ipairs(craters) do
+    }) do
         local crater = Create("Frame", {
             Size = UDim2.new(c.size, 0, c.size, 0),
             Position = c.pos,
-            BackgroundColor3 = Color3.fromRGB(190, 195, 210),
-            BackgroundTransparency = 0.25,
+            BackgroundColor3 = GetTheme().SurfaceLight,
+            BackgroundTransparency = 0.35,
             BorderSizePixel = 0,
             ZIndex = 2,
             Parent = MoonBody
@@ -132,24 +198,7 @@ local function BuildMoon(parent, size)
         Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = crater})
     end
 
-    -- Тонкое кольцо вокруг луны
-    local Ring = Create("Frame", {
-        Size = UDim2.new(0, size * 1.35, 0, size * 1.35),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundTransparency = 1,
-        ZIndex = 0,
-        Parent = parent
-    })
-    Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Ring})
-    Create("UIStroke", {
-        Color = Palette.Accent,
-        Thickness = 1,
-        Transparency = 0.6,
-        Parent = Ring
-    })
-
-    return MoonBody, Glow, Glow2, Ring
+    return MoonBody, Glow, Glow2
 end
 
 -- ============================================================
@@ -158,8 +207,7 @@ end
 function Ash:CreateWindow(config)
     config = config or {}
     local title = config.Title or "Ash"
-    local size = config.Size or UDim2.new(0, 520, 0, 420)
-    local theme = Palette
+    local size = config.Size or UDim2.new(0, 560, 0, 440)
     local guiParent = GetGuiParent()
 
     local ScreenGui = Create("ScreenGui", {
@@ -171,119 +219,113 @@ function Ash:CreateWindow(config)
         Parent = guiParent
     })
 
-    -- ========================================
-    -- ГЛАВНОЕ ОКНО
-    -- ========================================
     local Main = Create("Frame", {
         Name = "Main",
         Size = size,
         Position = UDim2.new(0.5, -size.X.Offset / 2, 0.5, -size.Y.Offset / 2),
-        BackgroundColor3 = theme.Background,
+        BackgroundColor3 = GetTheme().Background,
+        BackgroundTransparency = 1,
         BorderSizePixel = 0,
         ClipsDescendants = true,
         Parent = ScreenGui
     })
-    Create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = Main})
-    Create("UIStroke", {Color = theme.Border, Thickness = 1, Transparency = 0.4, Parent = Main})
+    Create("UICorner", {CornerRadius = UDim.new(0, 14), Parent = Main})
+    local MainStroke = Create("UIStroke", {
+        Color = GetTheme().Border,
+        Thickness = 1,
+        Transparency = 0.4,
+        Parent = Main
+    })
 
-    -- Лунное свечение за окном
+    -- Свечение
     local OuterGlow = Create("Frame", {
-        Size = UDim2.new(1, 20, 1, 20),
-        Position = UDim2.new(0, -10, 0, -10),
-        BackgroundColor3 = theme.MoonGlow,
-        BackgroundTransparency = 0.92,
+        Size = UDim2.new(1, 24, 1, 24),
+        Position = UDim2.new(0, -12, 0, -12),
+        BackgroundColor3 = GetTheme().MoonGlow,
+        BackgroundTransparency = 1,
         BorderSizePixel = 0,
         ZIndex = -1,
         Parent = Main
     })
-    Create("UICorner", {CornerRadius = UDim.new(0, 16), Parent = OuterGlow})
+    Create("UICorner", {CornerRadius = UDim.new(0, 20), Parent = OuterGlow})
 
     -- Тень
     local Shadow = Create("Frame", {
-        Size = UDim2.new(1, 4, 1, 4),
-        Position = UDim2.new(0, -2, 0, -2),
+        Size = UDim2.new(1, 6, 1, 6),
+        Position = UDim2.new(0, -3, 0, -3),
         BackgroundColor3 = Color3.new(0, 0, 0),
-        BackgroundTransparency = 0.5,
+        BackgroundTransparency = 0.55,
         BorderSizePixel = 0,
         ZIndex = -2,
         Parent = Main
     })
-    Create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = Shadow})
+    Create("UICorner", {CornerRadius = UDim.new(0, 14), Parent = Shadow})
 
-    -- ========================================
-    -- ФОНОВАЯ ЛУНА ВНУТРИ ОКНА
-    -- ========================================
+    -- Луна внутри
     local MoonLayer = Create("Frame", {
-        Name = "MoonLayer",
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
         ClipsDescendants = true,
         ZIndex = 0,
         Parent = Main
     })
-    local MoonBody, MoonGlow, MoonGlow2, MoonRing = BuildMoon(MoonLayer, 220)
-    MoonBody.ZIndex = 0
-    MoonGlow.ZIndex = 0
-    MoonGlow2.ZIndex = 0
-    MoonRing.ZIndex = 0
+    BuildMoon(MoonLayer, 240)
 
-    -- ========================================
     -- TITLE BAR
-    -- ========================================
     local TitleBar = Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 40),
-        BackgroundColor3 = theme.Surface,
+        Size = UDim2.new(1, 0, 0, 42),
+        BackgroundColor3 = GetTheme().Surface,
         BackgroundTransparency = 0.15,
         BorderSizePixel = 0,
         ZIndex = 3,
         Parent = Main
     })
-    Create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = TitleBar})
+    Create("UICorner", {CornerRadius = UDim.new(0, 14), Parent = TitleBar})
     Create("Frame", {
         Size = UDim2.new(1, 0, 0, 12),
         Position = UDim2.new(0, 0, 1, -12),
-        BackgroundColor3 = theme.Surface,
+        BackgroundColor3 = GetTheme().Surface,
         BackgroundTransparency = 0.15,
         BorderSizePixel = 0,
         ZIndex = 3,
         Parent = TitleBar
     })
-    Create("Frame", {
+    local TitleBorder = Create("Frame", {
         Size = UDim2.new(1, 0, 0, 1),
         Position = UDim2.new(0, 0, 1, -1),
-        BackgroundColor3 = theme.Border,
+        BackgroundColor3 = GetTheme().Border,
+        BackgroundTransparency = 0.5,
         BorderSizePixel = 0,
         ZIndex = 3,
         Parent = TitleBar
     })
 
-    -- Иконка луны в углу
+    -- Иконка-луна
     local IconFrame = Create("Frame", {
-        Size = UDim2.new(0, 22, 0, 22),
-        Position = UDim2.new(0, 12, 0.5, -11),
-        BackgroundColor3 = theme.Accent,
+        Size = UDim2.new(0, 24, 0, 24),
+        Position = UDim2.new(0, 12, 0.5, -12),
+        BackgroundColor3 = GetTheme().Accent,
         BorderSizePixel = 0,
         ZIndex = 4,
         Parent = TitleBar
     })
     Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = IconFrame})
-    -- маленький кратер на иконке
     local IconCrater = Create("Frame", {
         Size = UDim2.new(0, 6, 0, 6),
         Position = UDim2.new(0.25, 0, 0.3, 0),
-        BackgroundColor3 = Color3.fromRGB(170, 175, 190),
+        BackgroundColor3 = GetTheme().SurfaceLight,
         BorderSizePixel = 0,
         ZIndex = 5,
         Parent = IconFrame
     })
     Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = IconCrater})
 
-    Create("TextLabel", {
-        Size = UDim2.new(1, -100, 1, 0),
-        Position = UDim2.new(0, 42, 0, 0),
+    local TitleLabel = Create("TextLabel", {
+        Size = UDim2.new(1, -110, 1, 0),
+        Position = UDim2.new(0, 46, 0, 0),
         BackgroundTransparency = 1,
         Text = title,
-        TextColor3 = theme.Text,
+        TextColor3 = GetTheme().Text,
         TextSize = 13,
         Font = Enum.Font.GothamBold,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -292,12 +334,12 @@ function Ash:CreateWindow(config)
     })
 
     if config.Version then
-        Create("TextLabel", {
+        local VerLabel = Create("TextLabel", {
             Size = UDim2.new(0, 50, 1, 0),
             Position = UDim2.new(1, -120, 0, 0),
             BackgroundTransparency = 1,
             Text = "v" .. config.Version,
-            TextColor3 = theme.TextDisabled,
+            TextColor3 = GetTheme().TextDisabled,
             TextSize = 10,
             Font = Enum.Font.Gotham,
             TextXAlignment = Enum.TextXAlignment.Right,
@@ -306,12 +348,11 @@ function Ash:CreateWindow(config)
         })
     end
 
-    local buttonSize = 24
-
+    local buttonSize = 26
     local MinimizeBtn = Create("TextButton", {
         Size = UDim2.new(0, buttonSize, 0, buttonSize),
-        Position = UDim2.new(1, -buttonSize * 2 - 10, 0.5, -buttonSize / 2),
-        BackgroundColor3 = theme.SurfaceLight,
+        Position = UDim2.new(1, -buttonSize * 2 - 12, 0.5, -buttonSize / 2),
+        BackgroundColor3 = GetTheme().SurfaceLight,
         BorderSizePixel = 0,
         Text = "",
         AutoButtonColor = false,
@@ -322,7 +363,7 @@ function Ash:CreateWindow(config)
     Create("Frame", {
         Size = UDim2.new(0, 10, 0, 2),
         Position = UDim2.new(0.5, -5, 0.5, -1),
-        BackgroundColor3 = theme.TextDim,
+        BackgroundColor3 = GetTheme().TextDim,
         BorderSizePixel = 0,
         ZIndex = 5,
         Parent = MinimizeBtn
@@ -330,8 +371,8 @@ function Ash:CreateWindow(config)
 
     local CloseBtn = Create("TextButton", {
         Size = UDim2.new(0, buttonSize, 0, buttonSize),
-        Position = UDim2.new(1, -buttonSize - 10, 0.5, -buttonSize / 2),
-        BackgroundColor3 = theme.SurfaceLight,
+        Position = UDim2.new(1, -buttonSize - 12, 0.5, -buttonSize / 2),
+        BackgroundColor3 = GetTheme().SurfaceLight,
         BorderSizePixel = 0,
         Text = "",
         AutoButtonColor = false,
@@ -342,7 +383,7 @@ function Ash:CreateWindow(config)
     local cross1 = Create("Frame", {
         Size = UDim2.new(0, 9, 0, 2),
         Position = UDim2.new(0.5, -4.5, 0.5, -1),
-        BackgroundColor3 = theme.TextDim,
+        BackgroundColor3 = GetTheme().TextDim,
         BorderSizePixel = 0,
         Rotation = 45,
         ZIndex = 5,
@@ -351,7 +392,7 @@ function Ash:CreateWindow(config)
     local cross2 = Create("Frame", {
         Size = UDim2.new(0, 9, 0, 2),
         Position = UDim2.new(0.5, -4.5, 0.5, -1),
-        BackgroundColor3 = theme.TextDim,
+        BackgroundColor3 = GetTheme().TextDim,
         BorderSizePixel = 0,
         Rotation = -45,
         ZIndex = 5,
@@ -359,46 +400,81 @@ function Ash:CreateWindow(config)
     })
 
     MinimizeBtn.MouseEnter:Connect(function()
-        Tween(MinimizeBtn, {BackgroundColor3 = theme.SurfaceHover}, 0.15)
+        Tween(MinimizeBtn, {BackgroundColor3 = GetTheme().SurfaceHover}, 0.15)
     end)
     MinimizeBtn.MouseLeave:Connect(function()
-        Tween(MinimizeBtn, {BackgroundColor3 = theme.SurfaceLight}, 0.15)
+        Tween(MinimizeBtn, {BackgroundColor3 = GetTheme().SurfaceLight}, 0.15)
     end)
     CloseBtn.MouseEnter:Connect(function()
-        Tween(CloseBtn, {BackgroundColor3 = theme.Text}, 0.15)
-        Tween(cross1, {BackgroundColor3 = theme.Background}, 0.15)
-        Tween(cross2, {BackgroundColor3 = theme.Background}, 0.15)
+        Tween(CloseBtn, {BackgroundColor3 = GetTheme().Accent}, 0.15)
+        Tween(cross1, {BackgroundColor3 = GetTheme().Background}, 0.15)
+        Tween(cross2, {BackgroundColor3 = GetTheme().Background}, 0.15)
     end)
     CloseBtn.MouseLeave:Connect(function()
-        Tween(CloseBtn, {BackgroundColor3 = theme.SurfaceLight}, 0.15)
-        Tween(cross1, {BackgroundColor3 = theme.TextDim}, 0.15)
-        Tween(cross2, {BackgroundColor3 = theme.TextDim}, 0.15)
+        Tween(CloseBtn, {BackgroundColor3 = GetTheme().SurfaceLight}, 0.15)
+        Tween(cross1, {BackgroundColor3 = GetTheme().TextDim}, 0.15)
+        Tween(cross2, {BackgroundColor3 = GetTheme().TextDim}, 0.15)
     end)
 
-    -- Drag
+    -- ========================================
+    -- ПЛАВНОЕ ПЕРЕТАСКИВАНИЕ С ИНЕРЦИЕЙ
+    -- ========================================
     local dragging, dragStart, startPos = false, nil, nil
+    local lastMoveTime, lastDelta = 0, Vector2.new(0, 0)
+
+    local function smoothDragLoop()
+        task.spawn(function()
+            while dragging do
+                task.wait()
+            end
+            -- Инерция после отпускания
+            if GlobalSettings.DragSmooth > 0 and lastDelta.Magnitude > 1 then
+                local vel = lastDelta
+                local steps = 10
+                for i = steps, 1, -1 do
+                    local alpha = i / steps
+                    Main.Position = UDim2.new(
+                        Main.Position.X.Scale,
+                        Main.Position.X.Offset + vel.X * alpha * 0.5,
+                        Main.Position.Y.Scale,
+                        Main.Position.Y.Offset + vel.Y * alpha * 0.5
+                    )
+                    task.wait(GlobalSettings.DragSmooth / steps)
+                end
+            end
+        end)
+    end
+
     TitleBar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
            or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
             startPos = Main.Position
+            lastMoveTime = tick()
+            lastDelta = Vector2.new(0, 0)
         end
     end)
     TitleBar.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
-                          or input.UserInputType == Enum.UserInputType.Touch) then
+        if not dragging then return end
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+           or input.UserInputType == Enum.UserInputType.Touch then
             local delta = input.Position - dragStart
-            Main.Position = UDim2.new(
+            local targetPos = UDim2.new(
                 startPos.X.Scale, startPos.X.Offset + delta.X,
                 startPos.Y.Scale, startPos.Y.Offset + delta.Y
             )
+            -- Плавное движение через Tween
+            Tween(Main, {Position = targetPos}, GlobalSettings.DragSmooth, Enum.EasingStyle.Quad)
+            lastDelta = input.Position - (dragStart + delta)
+            lastMoveTime = tick()
         end
     end)
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
            or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
+            smoothDragLoop()
         end
     end)
 
@@ -406,16 +482,16 @@ function Ash:CreateWindow(config)
     -- КОНТЕНТ
     -- ========================================
     local Container = Create("Frame", {
-        Size = UDim2.new(1, 0, 1, -40),
-        Position = UDim2.new(0, 0, 0, 40),
+        Size = UDim2.new(1, 0, 1, -42),
+        Position = UDim2.new(0, 0, 0, 42),
         BackgroundTransparency = 1,
         ZIndex = 2,
         Parent = Main
     })
 
     local Sidebar = Create("Frame", {
-        Size = UDim2.new(0, 140, 1, 0),
-        BackgroundColor3 = theme.Surface,
+        Size = UDim2.new(0, 150, 1, 0),
+        BackgroundColor3 = GetTheme().Surface,
         BackgroundTransparency = 0.2,
         BorderSizePixel = 0,
         ZIndex = 2,
@@ -424,7 +500,7 @@ function Ash:CreateWindow(config)
     Create("Frame", {
         Size = UDim2.new(0, 1, 1, 0),
         Position = UDim2.new(1, -1, 0, 0),
-        BackgroundColor3 = theme.Border,
+        BackgroundColor3 = GetTheme().Border,
         BackgroundTransparency = 0.5,
         BorderSizePixel = 0,
         ZIndex = 3,
@@ -432,7 +508,7 @@ function Ash:CreateWindow(config)
     })
 
     local TabContainer = Create("ScrollingFrame", {
-        Size = UDim2.new(1, 0, 1, -60),
+        Size = UDim2.new(1, 0, 1, -64),
         Position = UDim2.new(0, 0, 0, 8),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
@@ -453,23 +529,22 @@ function Ash:CreateWindow(config)
         Parent = TabContainer
     })
 
-    -- Инфо игрока
     local UserInfo = Create("Frame", {
-        Size = UDim2.new(1, -12, 0, 44),
-        Position = UDim2.new(0, 6, 1, -50),
-        BackgroundColor3 = theme.SurfaceLight,
+        Size = UDim2.new(1, -12, 0, 46),
+        Position = UDim2.new(0, 6, 1, -52),
+        BackgroundColor3 = GetTheme().SurfaceLight,
         BackgroundTransparency = 0.3,
         BorderSizePixel = 0,
         ZIndex = 3,
         Parent = Sidebar
     })
     Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = UserInfo})
-    Create("TextLabel", {
+    local UnameLabel = Create("TextLabel", {
         Size = UDim2.new(1, -12, 0, 16),
         Position = UDim2.new(0, 8, 0, 6),
         BackgroundTransparency = 1,
         Text = LocalPlayer.Name,
-        TextColor3 = theme.Text,
+        TextColor3 = GetTheme().Text,
         TextSize = 11,
         Font = Enum.Font.GothamBold,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -477,12 +552,12 @@ function Ash:CreateWindow(config)
         ZIndex = 4,
         Parent = UserInfo
     })
-    Create("TextLabel", {
+    local UiLabel = Create("TextLabel", {
         Size = UDim2.new(1, -12, 0, 12),
-        Position = UDim2.new(0, 8, 0, 22),
+        Position = UDim2.new(0, 8, 0, 24),
         BackgroundTransparency = 1,
-        Text = "Lunar UI",
-        TextColor3 = theme.TextDisabled,
+        Text = "Lunar UI v2",
+        TextColor3 = GetTheme().TextDisabled,
         TextSize = 9,
         Font = Enum.Font.Gotham,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -490,18 +565,15 @@ function Ash:CreateWindow(config)
         Parent = UserInfo
     })
 
-    -- Область страниц
     local PageContainer = Create("Frame", {
-        Size = UDim2.new(1, -140, 1, 0),
-        Position = UDim2.new(0, 140, 0, 0),
+        Size = UDim2.new(1, -150, 1, 0),
+        Position = UDim2.new(0, 150, 0, 0),
         BackgroundTransparency = 1,
         ZIndex = 2,
         Parent = Container
     })
 
-    -- ========================================
-    -- ОБЪЕКТ ОКНА
-    -- ========================================
+    -- Объект окна
     local Window = {
         Gui = ScreenGui,
         Main = Main,
@@ -513,10 +585,41 @@ function Ash:CreateWindow(config)
         ActiveTab = nil,
         Hidden = false,
         OrigSize = size,
-        OrigPosition = Main.Position,
-        Config = config
+        Config = config,
+        _MainStroke = MainStroke,
+        _OuterGlow = OuterGlow,
+        _TitleBorder = TitleBorder,
+        _IconFrame = IconFrame,
+        _IconCrater = IconCrater,
+        _TitleLabel = TitleLabel,
+        _UnameLabel = UnameLabel,
+        _UiLabel = UiLabel,
+        _MinimizeBtn = MinimizeBtn,
+        _CloseBtn = CloseBtn,
+        _Sidebar = Sidebar,
     }
     setmetatable(Window, {__index = Ash})
+
+    -- ========================================
+    -- ПРИМЕНЕНИЕ ТЕМЫ
+    -- ========================================
+    function Window:ApplyTheme()
+        local t = GetTheme()
+        Main.BackgroundColor3 = t.Background
+        TitleBar.BackgroundColor3 = t.Surface
+        TitleBorder.BackgroundColor3 = t.Border
+        IconFrame.BackgroundColor3 = t.Accent
+        IconCrater.BackgroundColor3 = t.SurfaceLight
+        TitleLabel.TextColor3 = t.Text
+        UnameLabel.TextColor3 = t.Text
+        UiLabel.TextColor3 = t.TextDisabled
+        MinimizeBtn.BackgroundColor3 = t.SurfaceLight
+        CloseBtn.BackgroundColor3 = t.SurfaceLight
+        Sidebar.BackgroundColor3 = t.Surface
+        UserInfo.BackgroundColor3 = t.SurfaceLight
+        MainStroke.Color = t.Border
+        OuterGlow.BackgroundColor3 = t.MoonGlow
+    end
 
     -- ========================================
     -- МЕТОД: Создать таб
@@ -524,10 +627,11 @@ function Ash:CreateWindow(config)
     function Window:CreateTab(tabConfig)
         tabConfig = tabConfig or {}
         local tabName = tabConfig.Name or "Tab"
+        local t = GetTheme()
 
         local TabBtn = Create("TextButton", {
-            Size = UDim2.new(1, 0, 0, 30),
-            BackgroundColor3 = theme.Background,
+            Size = UDim2.new(1, 0, 0, 32),
+            BackgroundColor3 = t.Background,
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
             Text = "",
@@ -538,9 +642,9 @@ function Ash:CreateWindow(config)
         Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = TabBtn})
 
         local Indicator = Create("Frame", {
-            Size = UDim2.new(0, 3, 0, 14),
-            Position = UDim2.new(0, 0, 0.5, -7),
-            BackgroundColor3 = theme.Accent,
+            Size = UDim2.new(0, 3, 0, 16),
+            Position = UDim2.new(0, 0, 0.5, -8),
+            BackgroundColor3 = t.Accent,
             BorderSizePixel = 0,
             Visible = false,
             ZIndex = 5,
@@ -549,11 +653,11 @@ function Ash:CreateWindow(config)
         Create("UICorner", {CornerRadius = UDim.new(0, 2), Parent = Indicator})
 
         local TabLabel = Create("TextLabel", {
-            Size = UDim2.new(1, -12, 1, 0),
-            Position = UDim2.new(0, 12, 0, 0),
+            Size = UDim2.new(1, -14, 1, 0),
+            Position = UDim2.new(0, 14, 0, 0),
             BackgroundTransparency = 1,
             Text = tabName,
-            TextColor3 = theme.TextDim,
+            TextColor3 = t.TextDim,
             TextSize = 11,
             Font = Enum.Font.GothamMedium,
             TextXAlignment = Enum.TextXAlignment.Left,
@@ -567,7 +671,7 @@ function Ash:CreateWindow(config)
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
             ScrollBarThickness = 3,
-            ScrollBarImageColor3 = theme.TextDim,
+            ScrollBarImageColor3 = t.TextDim,
             ScrollBarImageTransparency = 0.5,
             CanvasSize = UDim2.new(0, 0, 0, 0),
             AutomaticCanvasSize = Enum.AutomaticSize.Y,
@@ -614,11 +718,20 @@ function Ash:CreateWindow(config)
         end
 
         -- ========================================
-        -- Секция
+        -- ПЛАВНАЯ СМЕНА СТРАНИЦ
         -- ========================================
+        local function AnimatePageOpen(page)
+            page.Visible = true
+            page.Position = UDim2.new(0, 8 + 20, 0, 8)
+            page.BackgroundTransparency = 1
+            Tween(page, {Position = UDim2.new(0, 8, 0, 8)}, 0.25, Enum.EasingStyle.Quart)
+        end
+
+        -- Section
         function tab:CreateSection(sectionName)
+            local tt = GetTheme()
             local Sec = Create("Frame", {
-                Size = UDim2.new(1, 0, 0, 20),
+                Size = UDim2.new(1, 0, 0, 22),
                 BackgroundTransparency = 1,
                 ZIndex = 4,
                 Parent = self.Page
@@ -627,7 +740,7 @@ function Ash:CreateWindow(config)
                 Size = UDim2.new(1, 0, 1, 0),
                 BackgroundTransparency = 1,
                 Text = string.upper(sectionName),
-                TextColor3 = theme.TextDisabled,
+                TextColor3 = tt.TextDisabled,
                 TextSize = 9,
                 Font = Enum.Font.GothamBold,
                 TextXAlignment = Enum.TextXAlignment.Left,
@@ -635,9 +748,10 @@ function Ash:CreateWindow(config)
                 Parent = Sec
             })
             Create("Frame", {
-                Size = UDim2.new(1, -80, 0, 1),
-                Position = UDim2.new(0, 80, 0.5, 0),
-                BackgroundColor3 = theme.Border,
+                Size = UDim2.new(1, -90, 0, 1),
+                Position = UDim2.new(0, 90, 0.5, 0),
+                BackgroundColor3 = tt.Border,
+                BackgroundTransparency = 0.4,
                 BorderSizePixel = 0,
                 ZIndex = 5,
                 Parent = Sec
@@ -645,14 +759,13 @@ function Ash:CreateWindow(config)
             return Sec
         end
 
-        -- ========================================
-        -- Кнопка
-        -- ========================================
+        -- Button
         function tab:CreateButton(cfg)
             cfg = cfg or {}
+            local tt = GetTheme()
             local Btn = Create("TextButton", {
-                Size = UDim2.new(1, 0, 0, 32),
-                BackgroundColor3 = theme.SurfaceLight,
+                Size = UDim2.new(1, 0, 0, 34),
+                BackgroundColor3 = tt.SurfaceLight,
                 BackgroundTransparency = 0.15,
                 BorderSizePixel = 0,
                 Text = "",
@@ -661,13 +774,13 @@ function Ash:CreateWindow(config)
                 Parent = self.Page
             })
             Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = Btn})
-            Create("UIStroke", {Color = theme.Border, Thickness = 1, Transparency = 0.5, Parent = Btn})
-            Create("TextLabel", {
+            Create("UIStroke", {Color = tt.Border, Thickness = 1, Transparency = 0.5, Parent = Btn})
+            local L = Create("TextLabel", {
                 Size = UDim2.new(1, -16, 1, 0),
                 Position = UDim2.new(0, 10, 0, 0),
                 BackgroundTransparency = 1,
                 Text = cfg.Name or "Button",
-                TextColor3 = theme.Text,
+                TextColor3 = tt.Text,
                 TextSize = 11,
                 Font = Enum.Font.GothamMedium,
                 TextXAlignment = Enum.TextXAlignment.Left,
@@ -675,10 +788,10 @@ function Ash:CreateWindow(config)
                 Parent = Btn
             })
             Btn.MouseEnter:Connect(function()
-                Tween(Btn, {BackgroundColor3 = theme.SurfaceHover, BackgroundTransparency = 0.05}, 0.15)
+                Tween(Btn, {BackgroundColor3 = tt.SurfaceHover, BackgroundTransparency = 0.05}, 0.15)
             end)
             Btn.MouseLeave:Connect(function()
-                Tween(Btn, {BackgroundColor3 = theme.SurfaceLight, BackgroundTransparency = 0.15}, 0.15)
+                Tween(Btn, {BackgroundColor3 = tt.SurfaceLight, BackgroundTransparency = 0.15}, 0.15)
             end)
             Btn.MouseButton1Click:Connect(function()
                 pcall(cfg.Callback or function() end)
@@ -686,785 +799,24 @@ function Ash:CreateWindow(config)
             return Btn
         end
 
-        -- ========================================
-        -- Тумблер
-        -- ========================================
+        -- Toggle
         function tab:CreateToggle(cfg)
             cfg = cfg or {}
+            local tt = GetTheme()
             local default = cfg.Default or false
             local callback = cfg.Callback or function() end
             local flag = cfg.Flag
 
             local Frame = Create("Frame", {
-                Size = UDim2.new(1, 0, 0, 32),
-                BackgroundColor3 = theme.SurfaceLight,
+                Size = UDim2.new(1, 0, 0, 34),
+                BackgroundColor3 = tt.SurfaceLight,
                 BackgroundTransparency = 0.15,
                 BorderSizePixel = 0,
                 ZIndex = 4,
                 Parent = self.Page
             })
             Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = Frame})
-            Create("UIStroke", {Color = theme.Border, Thickness = 1, Transparency = 0.5, Parent = Frame})
+            Create("UIStroke", {Color = tt.Border, Thickness = 1, Transparency = 0.5, Parent = Frame})
             Create("TextLabel", {
-                Size = UDim2.new(1, -56, 1, 0),
+                Size = UDim2.new(1, -60, 1, 0),
                 Position = UDim2.new(0, 10, 0, 0),
-                BackgroundTransparency = 1,
-                Text = cfg.Name or "Toggle",
-                TextColor3 = theme.Text,
-                TextSize = 11,
-                Font = Enum.Font.GothamMedium,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                ZIndex = 5,
-                Parent = Frame
-            })
-
-            local Switch = Create("TextButton", {
-                Size = UDim2.new(0, 34, 0, 18),
-                Position = UDim2.new(1, -44, 0.5, -9),
-                BackgroundColor3 = default and theme.Accent or theme.BorderLight,
-                BorderSizePixel = 0,
-                Text = "",
-                AutoButtonColor = false,
-                ZIndex = 5,
-                Parent = Frame
-            })
-            Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Switch})
-            local Knob = Create("Frame", {
-                Size = UDim2.new(0, 14, 0, 14),
-                Position = default and UDim2.new(0, 18, 0.5, -7) or UDim2.new(0, 2, 0.5, -7),
-                BackgroundColor3 = default and theme.Background or theme.TextDim,
-                BorderSizePixel = 0,
-                ZIndex = 6,
-                Parent = Switch
-            })
-            Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Knob})
-
-            local state = default
-            local obj = {State = state, Flag = flag}
-
-            function obj:Set(value, fireCallback)
-                state = value
-                obj.State = value
-                if value then
-                    Tween(Switch, {BackgroundColor3 = theme.Accent}, 0.2)
-                    Tween(Knob, {Position = UDim2.new(0, 18, 0.5, -7), BackgroundColor3 = theme.Background}, 0.2)
-                else
-                    Tween(Switch, {BackgroundColor3 = theme.BorderLight}, 0.2)
-                    Tween(Knob, {Position = UDim2.new(0, 2, 0.5, -7), BackgroundColor3 = theme.TextDim}, 0.2)
-                end
-                if flag then Ash.Flags[flag] = value end
-                if fireCallback ~= false then pcall(callback, value) end
-            end
-
-            function obj:Get() return state end
-
-            Switch.MouseButton1Click:Connect(function()
-                obj:Set(not state)
-            end)
-
-            obj:Set(default, false)
-            return obj
-        end
-
-        -- ========================================
-        -- Слайдер
-        -- ========================================
-        function tab:CreateSlider(cfg)
-            cfg = cfg or {}
-            local min = cfg.Min or 0
-            local max = cfg.Max or 100
-            local default = cfg.Default or min
-            local callback = cfg.Callback or function() end
-            local flag = cfg.Flag
-            local suffix = cfg.Suffix or ""
-
-            local Frame = Create("Frame", {
-                Size = UDim2.new(1, 0, 0, 44),
-                BackgroundColor3 = theme.SurfaceLight,
-                BackgroundTransparency = 0.15,
-                BorderSizePixel = 0,
-                ZIndex = 4,
-                Parent = self.Page
-            })
-            Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = Frame})
-            Create("UIStroke", {Color = theme.Border, Thickness = 1, Transparency = 0.5, Parent = Frame})
-            Create("TextLabel", {
-                Size = UDim2.new(1, -70, 0, 16),
-                Position = UDim2.new(0, 10, 0, 4),
-                BackgroundTransparency = 1,
-                Text = cfg.Name or "Slider",
-                TextColor3 = theme.Text,
-                TextSize = 11,
-                Font = Enum.Font.GothamMedium,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                ZIndex = 5,
-                Parent = Frame
-            })
-            local ValueLabel = Create("TextLabel", {
-                Size = UDim2.new(0, 60, 0, 16),
-                Position = UDim2.new(1, -70, 0, 4),
-                BackgroundTransparency = 1,
-                Text = tostring(default) .. suffix,
-                TextColor3 = theme.Text,
-                TextSize = 11,
-                Font = Enum.Font.GothamBold,
-                TextXAlignment = Enum.TextXAlignment.Right,
-                ZIndex = 5,
-                Parent = Frame
-            })
-
-            local Track = Create("Frame", {
-                Size = UDim2.new(1, -20, 0, 4),
-                Position = UDim2.new(0, 10, 0, 28),
-                BackgroundColor3 = theme.BorderLight,
-                BorderSizePixel = 0,
-                ZIndex = 5,
-                Parent = Frame
-            })
-            Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Track})
-            local Fill = Create("Frame", {
-                Size = UDim2.new((default - min) / (max - min), 0, 1, 0),
-                BackgroundColor3 = theme.Accent,
-                BorderSizePixel = 0,
-                ZIndex = 6,
-                Parent = Track
-            })
-            Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Fill})
-            local Thumb = Create("Frame", {
-                Size = UDim2.new(0, 12, 0, 12),
-                Position = UDim2.new((default - min) / (max - min), -6, 0.5, -6),
-                BackgroundColor3 = theme.Text,
-                BorderSizePixel = 0,
-                ZIndex = 7,
-                Parent = Track
-            })
-            Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = Thumb})
-
-            local value = default
-            local obj = {Value = value, Flag = flag}
-
-            function obj:Set(newVal, fireCallback)
-                newVal = math.clamp(newVal, min, max)
-                value = newVal
-                obj.Value = newVal
-                local alpha = (newVal - min) / (max - min)
-                Tween(Fill, {Size = UDim2.new(alpha, 0, 1, 0)}, 0.1)
-                Tween(Thumb, {Position = UDim2.new(alpha, -6, 0.5, -6)}, 0.1)
-                ValueLabel.Text = tostring(math.floor(newVal * 100) / 100) .. suffix
-                if flag then Ash.Flags[flag] = newVal end
-                if fireCallback ~= false then pcall(callback, newVal) end
-            end
-
-            function obj:Get() return value end
-
-            local dragging = false
-            local function updateFromInput(input)
-                local pos = input.Position.X - Track.AbsolutePosition.X
-                local alpha = math.clamp(pos / Track.AbsoluteSize.X, 0, 1)
-                local newVal = min + alpha * (max - min)
-                if max - min > 20 then newVal = math.floor(newVal) end
-                obj:Set(newVal)
-            end
-
-            Track.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1
-                   or input.UserInputType == Enum.UserInputType.Touch then
-                    dragging = true
-                    updateFromInput(input)
-                end
-            end)
-            UserInputService.InputChanged:Connect(function(input)
-                if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
-                                  or input.UserInputType == Enum.UserInputType.Touch) then
-                    updateFromInput(input)
-                end
-            end)
-            UserInputService.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1
-                   or input.UserInputType == Enum.UserInputType.Touch then
-                    dragging = false
-                end
-            end)
-
-            obj:Set(default, false)
-            return obj
-        end
-
-        -- ========================================
-        -- Текстовое поле
-        -- ========================================
-        function tab:CreateTextBox(cfg)
-            cfg = cfg or {}
-            local default = cfg.Default or ""
-            local placeholder = cfg.Placeholder or "Введите текст..."
-            local callback = cfg.Callback or function() end
-            local flag = cfg.Flag
-
-            local Frame = Create("Frame", {
-                Size = UDim2.new(1, 0, 0, 32),
-                BackgroundColor3 = theme.SurfaceLight,
-                BackgroundTransparency = 0.15,
-                BorderSizePixel = 0,
-                ZIndex = 4,
-                Parent = self.Page
-            })
-            Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = Frame})
-            Create("UIStroke", {Color = theme.Border, Thickness = 1, Transparency = 0.5, Parent = Frame})
-            Create("TextLabel", {
-                Size = UDim2.new(0, 90, 1, 0),
-                Position = UDim2.new(0, 10, 0, 0),
-                BackgroundTransparency = 1,
-                Text = cfg.Name or "TextBox",
-                TextColor3 = theme.Text,
-                TextSize = 11,
-                Font = Enum.Font.GothamMedium,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                ZIndex = 5,
-                Parent = Frame
-            })
-
-            local Input = Create("TextBox", {
-                Size = UDim2.new(0, 140, 0, 22),
-                Position = UDim2.new(1, -150, 0.5, -11),
-                BackgroundColor3 = theme.Background,
-                BorderSizePixel = 0,
-                Text = default,
-                PlaceholderText = placeholder,
-                PlaceholderColor3 = theme.TextDisabled,
-                TextColor3 = theme.Text,
-                TextSize = 10,
-                Font = Enum.Font.Gotham,
-                ClearTextOnFocus = false,
-                ZIndex = 5,
-                Parent = Frame
-            })
-            Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = Input})
-            Create("UIStroke", {Color = theme.Border, Thickness = 1, Parent = Input})
-            Create("UIPadding", {PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6), Parent = Input})
-
-            local obj = {Value = default, Flag = flag}
-
-            function obj:Set(val, fireCallback)
-                Input.Text = val
-                obj.Value = val
-                if flag then Ash.Flags[flag] = val end
-                if fireCallback ~= false then pcall(callback, val) end
-            end
-
-            function obj:Get() return Input.Text end
-
-            Input.FocusLost:Connect(function()
-                obj.Value = Input.Text
-                if flag then Ash.Flags[flag] = Input.Text end
-                pcall(callback, Input.Text)
-            end)
-
-            return obj
-        end
-
-        -- ========================================
-        -- Dropdown
-        -- ========================================
-        function tab:CreateDropdown(cfg)
-            cfg = cfg or {}
-            local options = cfg.Options or {}
-            local default = cfg.Default or options[1] or "—"
-            local callback = cfg.Callback or function() end
-            local flag = cfg.Flag
-
-            local Frame = Create("Frame", {
-                Size = UDim2.new(1, 0, 0, 32),
-                BackgroundColor3 = theme.SurfaceLight,
-                BackgroundTransparency = 0.15,
-                BorderSizePixel = 0,
-                ClipsDescendants = true,
-                ZIndex = 4,
-                Parent = self.Page
-            })
-            Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = Frame})
-            Create("UIStroke", {Color = theme.Border, Thickness = 1, Transparency = 0.5, Parent = Frame})
-
-            local Header = Create("TextButton", {
-                Size = UDim2.new(1, 0, 0, 32),
-                BackgroundTransparency = 1,
-                Text = "",
-                AutoButtonColor = false,
-                ZIndex = 5,
-                Parent = Frame
-            })
-            Create("TextLabel", {
-                Size = UDim2.new(1, -100, 1, 0),
-                Position = UDim2.new(0, 10, 0, 0),
-                BackgroundTransparency = 1,
-                Text = cfg.Name or "Dropdown",
-                TextColor3 = theme.Text,
-                TextSize = 11,
-                Font = Enum.Font.GothamMedium,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                ZIndex = 6,
-                Parent = Header
-            })
-            local ValueLabel = Create("TextLabel", {
-                Size = UDim2.new(0, 60, 1, 0),
-                Position = UDim2.new(1, -80, 0, 0),
-                BackgroundTransparency = 1,
-                Text = tostring(default),
-                TextColor3 = theme.TextDim,
-                TextSize = 10,
-                Font = Enum.Font.GothamBold,
-                TextXAlignment = Enum.TextXAlignment.Right,
-                ZIndex = 6,
-                Parent = Header
-            })
-            Create("TextLabel", {
-                Size = UDim2.new(0, 14, 1, 0),
-                Position = UDim2.new(1, -20, 0, 0),
-                BackgroundTransparency = 1,
-                Text = "▼",
-                TextColor3 = theme.TextDisabled,
-                TextSize = 8,
-                Font = Enum.Font.GothamBold,
-                ZIndex = 6,
-                Parent = Header
-            })
-
-            local expanded = false
-            local obj = {Value = default, Flag = flag}
-
-            local function toggleExpand()
-                expanded = not expanded
-                if expanded then
-                    Tween(Frame, {Size = UDim2.new(1, 0, 0, 32 + #options * 26)}, 0.2)
-                else
-                    Tween(Frame, {Size = UDim2.new(1, 0, 0, 32)}, 0.2)
-                end
-            end
-
-            Header.MouseButton1Click:Connect(toggleExpand)
-
-            for i, opt in ipairs(options) do
-                local OptBtn = Create("TextButton", {
-                    Size = UDim2.new(1, -12, 0, 22),
-                    Position = UDim2.new(0, 6, 0, 30 + (i - 1) * 26),
-                    BackgroundColor3 = theme.Surface,
-                    BorderSizePixel = 0,
-                    Text = tostring(opt),
-                    TextColor3 = theme.Text,
-                    TextSize = 10,
-                    Font = Enum.Font.Gotham,
-                    AutoButtonColor = false,
-                    ZIndex = 6,
-                    Parent = Frame
-                })
-                Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = OptBtn})
-                OptBtn.MouseEnter:Connect(function()
-                    Tween(OptBtn, {BackgroundColor3 = theme.SurfaceHover}, 0.1)
-                end)
-                OptBtn.MouseLeave:Connect(function()
-                    Tween(OptBtn, {BackgroundColor3 = theme.Surface}, 0.1)
-                end)
-                OptBtn.MouseButton1Click:Connect(function()
-                    obj.Value = opt
-                    ValueLabel.Text = tostring(opt)
-                    toggleExpand()
-                    if flag then Ash.Flags[flag] = opt end
-                    pcall(callback, opt)
-                end)
-            end
-
-            function obj:Set(val, fireCallback)
-                obj.Value = val
-                ValueLabel.Text = tostring(val)
-                if flag then Ash.Flags[flag] = val end
-                if fireCallback ~= false then pcall(callback, val) end
-            end
-
-            return obj
-        end
-
-        -- ========================================
-        -- Keybind
-        -- ========================================
-        function tab:CreateKeybind(cfg)
-            cfg = cfg or {}
-            local default = cfg.Default or Enum.KeyCode.F
-            local callback = cfg.Callback or function() end
-            local flag = cfg.Flag
-
-            local Frame = Create("Frame", {
-                Size = UDim2.new(1, 0, 0, 32),
-                BackgroundColor3 = theme.SurfaceLight,
-                BackgroundTransparency = 0.15,
-                BorderSizePixel = 0,
-                ZIndex = 4,
-                Parent = self.Page
-            })
-            Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = Frame})
-            Create("UIStroke", {Color = theme.Border, Thickness = 1, Transparency = 0.5, Parent = Frame})
-            Create("TextLabel", {
-                Size = UDim2.new(1, -110, 1, 0),
-                Position = UDim2.new(0, 10, 0, 0),
-                BackgroundTransparency = 1,
-                Text = cfg.Name or "Keybind",
-                TextColor3 = theme.Text,
-                TextSize = 11,
-                Font = Enum.Font.GothamMedium,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                ZIndex = 5,
-                Parent = Frame
-            })
-            local KeyBtn = Create("TextButton", {
-                Size = UDim2.new(0, 100, 0, 22),
-                Position = UDim2.new(1, -110, 0.5, -11),
-                BackgroundColor3 = theme.Background,
-                BorderSizePixel = 0,
-                Text = default.Name,
-                TextColor3 = theme.Text,
-                TextSize = 10,
-                Font = Enum.Font.GothamBold,
-                AutoButtonColor = false,
-                ZIndex = 5,
-                Parent = Frame
-            })
-            Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = KeyBtn})
-            Create("UIStroke", {Color = theme.Border, Thickness = 1, Parent = KeyBtn})
-
-            local currentKey = default
-            local listening = false
-            local obj = {Key = currentKey, Flag = flag}
-
-            function obj:Set(newKey)
-                currentKey = newKey
-                obj.Key = newKey
-                KeyBtn.Text = newKey.Name
-                if flag then Ash.Flags[flag] = newKey end
-            end
-
-            KeyBtn.MouseButton1Click:Connect(function()
-                if listening then return end
-                listening = true
-                KeyBtn.Text = "..."
-                local conn
-                conn = UserInputService.InputBegan:Connect(function(input, gpe)
-                    if gpe then return end
-                    if input.UserInputType == Enum.UserInputType.Keyboard then
-                        obj:Set(input.KeyCode)
-                        listening = false
-                        if conn then conn:Disconnect() end
-                    end
-                end)
-            end)
-
-            UserInputService.InputBegan:Connect(function(input, gpe)
-                if gpe then return end
-                if input.KeyCode == currentKey then
-                    pcall(callback, currentKey)
-                end
-            end)
-
-            return obj
-        end
-
-        return tab
-    end
-
-    -- ========================================
-    -- МЕТОД: Выбрать таб
-    -- ========================================
-    function Window:SelectTab(tab)
-        for _, t in ipairs(self.Tabs) do
-            t.Page.Visible = false
-            t.Indicator.Visible = false
-            Tween(t.Button, {BackgroundTransparency = 1}, 0.15)
-            Tween(t.Label, {TextColor3 = theme.TextDim}, 0.15)
-        end
-        tab.Page.Visible = true
-        tab.Indicator.Visible = true
-        Tween(tab.Button, {BackgroundTransparency = 0.9}, 0.15)
-        Tween(tab.Label, {TextColor3 = theme.Text}, 0.15)
-        self.ActiveTab = tab
-    end
-
-    -- ========================================
-    -- КНОПКА-ЛУНА (когда окно скрыто)
-    -- ========================================
-    local MoonButton = Create("TextButton", {
-        Name = "MoonButton",
-        Size = UDim2.new(0, 64, 0, 64),
-        Position = UDim2.new(0, 20, 0.5, -32),
-        BackgroundColor3 = theme.Background,
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        Text = "",
-        AutoButtonColor = false,
-        Visible = false,
-        ZIndex = 10,
-        Parent = ScreenGui
-    })
-
-    -- Свечение вокруг кнопки-луны
-    local BtnGlow = Create("Frame", {
-        Size = UDim2.new(1.4, 0, 1.4, 0),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = theme.MoonGlow,
-        BackgroundTransparency = 0.85,
-        BorderSizePixel = 0,
-        ZIndex = 10,
-        Parent = MoonButton
-    })
-    Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = BtnGlow})
-
-    -- Тело луны
-    local BtnMoon = Create("Frame", {
-        Size = UDim2.new(0, 44, 0, 44),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = theme.Text,
-        BorderSizePixel = 0,
-        ZIndex = 11,
-        Parent = MoonButton
-    })
-    Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = BtnMoon})
-
-    -- Кратеры на кнопке-луне
-    local btnCraters = {
-        {pos = UDim2.new(0.25, 0, 0.3, 0), size = 0.22},
-        {pos = UDim2.new(0.6, 0, 0.55, 0), size = 0.18},
-        {pos = UDim2.new(0.35, 0, 0.65, 0), size = 0.12},
-    }
-    for _, c in ipairs(btnCraters) do
-        local crater = Create("Frame", {
-            Size = UDim2.new(c.size, 0, c.size, 0),
-            Position = c.pos,
-            BackgroundColor3 = Color3.fromRGB(190, 195, 210),
-            BackgroundTransparency = 0.25,
-            BorderSizePixel = 0,
-            ZIndex = 12,
-            Parent = BtnMoon
-        })
-        Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = crater})
-    end
-
-    -- Кольцо вокруг кнопки-луны
-    local BtnRing = Create("Frame", {
-        Size = UDim2.new(0, 54, 0, 54),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundTransparency = 1,
-        ZIndex = 10,
-        Parent = MoonButton
-    })
-    Create("UICorner", {CornerRadius = UDim.new(1, 0), Parent = BtnRing})
-    Create("UIStroke", {
-        Color = theme.Accent,
-        Thickness = 1,
-        Transparency = 0.5,
-        Parent = BtnRing
-    })
-
-    MoonButton.MouseEnter:Connect(function()
-        Tween(BtnMoon, {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}, 0.15)
-        Tween(BtnGlow, {BackgroundTransparency = 0.7}, 0.15)
-    end)
-    MoonButton.MouseLeave:Connect(function()
-        Tween(BtnMoon, {BackgroundColor3 = theme.Text}, 0.15)
-        Tween(BtnGlow, {BackgroundTransparency = 0.85}, 0.15)
-    end)
-
-    -- ========================================
-    -- МЕТОД: Скрыть окно
-    -- ========================================
-    function Window:Hide()
-        if self.Hidden then return end
-        self.Hidden = true
-        self.OrigPosition = Main.Position
-
-        Tween(Main, {
-            Position = UDim2.new(0.5, -size.X.Offset / 2, 1.5, 0),
-            BackgroundTransparency = 1
-        }, 0.3)
-
-        task.delay(0.3, function()
-            Main.Visible = false
-            MoonButton.Visible = true
-            -- Плавное появление луны
-            MoonButton.Size = UDim2.new(0, 0, 0, 0)
-            MoonButton.Position = UDim2.new(0, 20, 0.5, 0)
-            Tween(MoonButton, {Size = UDim2.new(0, 64, 0, 64), Position = UDim2.new(0, 20, 0.5, -32)}, 0.3, Enum.EasingStyle.Back)
-        end)
-    end
-
-    -- ========================================
-    -- МЕТОД: Показать окно
-    -- ========================================
-    function Window:Show()
-        if not self.Hidden then return end
-        self.Hidden = false
-
-        -- Сжатие луны перед исчезновением
-        Tween(MoonButton, {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0, 20, 0.5, 0)}, 0.2, Enum.EasingStyle.Quad)
-        task.delay(0.2, function()
-            MoonButton.Visible = false
-        end)
-
-        Main.Visible = true
-        Main.BackgroundTransparency = 1
-        Main.Position = UDim2.new(0.5, -size.X.Offset / 2, 1.5, 0)
-
-        Tween(Main, {
-            Position = UDim2.new(0.5, -size.X.Offset / 2, 0.5, -size.Y.Offset / 2),
-            BackgroundTransparency = 0
-        }, 0.3)
-    end
-
-    -- ========================================
-    -- МЕТОД: Переключить
-    -- ========================================
-    function Window:Toggle()
-        if self.Hidden then
-            self:Show()
-        else
-            self:Hide()
-        end
-    end
-
-    -- Клик по луне — вернуть окно
-    MoonButton.MouseButton1Click:Connect(function()
-        Window:Show()
-    end)
-
-    -- Скрытие на K
-    UserInputService.InputBegan:Connect(function(input, gpe)
-        if gpe then return end
-        if input.KeyCode == Enum.KeyCode.K then
-            Window:Toggle()
-        end
-    end)
-
-    MinimizeBtn.MouseButton1Click:Connect(function()
-        Window:Hide()
-    end)
-
-    CloseBtn.MouseButton1Click:Connect(function()
-        Tween(Main, {
-            Size = UDim2.new(0, 0, 0, 0),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            BackgroundTransparency = 1
-        }, 0.2)
-        task.delay(0.25, function()
-            ScreenGui:Destroy()
-        end)
-    end)
-
-    table.insert(Ash.Windows, Window)
-    return Window
-end
-
--- ============================================================
--- УВЕДОМЛЕНИЯ
--- ============================================================
-function Ash:Notify(title, text, notifType, duration)
-    duration = duration or 3
-    local theme = Palette
-    local guiParent = GetGuiParent()
-
-    local NotifGui = Create("ScreenGui", {
-        Name = "Ash_Notif_" .. tostring(math.random(100000, 999999)),
-        ResetOnSpawn = false,
-        IgnoreGuiInset = true,
-        DisplayOrder = 1000000,
-        Parent = guiParent
-    })
-
-    local Container = Create("Frame", {
-        Size = UDim2.new(0, 280, 1, 0),
-        Position = UDim2.new(1, -300, 0, 0),
-        BackgroundTransparency = 1,
-        Parent = NotifGui
-    })
-    Create("UIListLayout", {
-        Padding = UDim.new(0, 8),
-        VerticalAlignment = Enum.VerticalAlignment.Bottom,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Parent = Container
-    })
-    Create("UIPadding", {
-        PaddingBottom = UDim.new(0, 20),
-        Parent = Container
-    })
-
-    local Notif = Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 60),
-        BackgroundColor3 = theme.Surface,
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        Parent = Container
-    })
-    Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = Notif})
-    local Stroke = Create("UIStroke", {
-        Color = theme.Accent,
-        Thickness = 1,
-        Transparency = 1,
-        Parent = Notif
-    })
-
-    local Bar = Create("Frame", {
-        Size = UDim2.new(0, 3, 1, -20),
-        Position = UDim2.new(0, 0, 0, 10),
-        BackgroundColor3 = theme.Accent,
-        BorderSizePixel = 0,
-        Parent = Notif
-    })
-    Create("UICorner", {CornerRadius = UDim.new(0, 2), Parent = Bar})
-
-    local TitleLabel = Create("TextLabel", {
-        Size = UDim2.new(1, -20, 0, 16),
-        Position = UDim2.new(0, 14, 0, 8),
-        BackgroundTransparency = 1,
-        Text = title,
-        TextColor3 = theme.Text,
-        TextSize = 12,
-        Font = Enum.Font.GothamBold,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextTransparency = 1,
-        Parent = Notif
-    })
-    local TextLabel = Create("TextLabel", {
-        Size = UDim2.new(1, -20, 0, 28),
-        Position = UDim2.new(0, 14, 0, 26),
-        BackgroundTransparency = 1,
-        Text = text,
-        TextColor3 = theme.TextDim,
-        TextSize = 10,
-        Font = Enum.Font.Gotham,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextYAlignment = Enum.TextYAlignment.Top,
-        TextWrapped = true,
-        TextTransparency = 1,
-        Parent = Notif
-    })
-
-    Tween(Notif, {BackgroundTransparency = 0.05}, 0.25)
-    Tween(Stroke, {Transparency = 0.4}, 0.25)
-    Tween(TitleLabel, {TextTransparency = 0}, 0.25)
-    Tween(TextLabel, {TextTransparency = 0.15}, 0.25)
-
-    task.delay(duration, function()
-        Tween(Notif, {BackgroundTransparency = 1}, 0.25)
-        Tween(Stroke, {Transparency = 1}, 0.25)
-        Tween(TitleLabel, {TextTransparency = 1}, 0.25)
-        Tween(TextLabel, {TextTransparency = 1}, 0.25)
-        task.wait(0.3)
-        if NotifGui then NotifGui:Destroy() end
-    end)
-end
-
--- ============================================================
--- ГЛОБАЛЬНАЯ УСТАНОВКА
--- ============================================================
-_G.AshLibrary = Ash
-
-print("[Ash UI] Lunar Edition загружена")
-
-return Ash
